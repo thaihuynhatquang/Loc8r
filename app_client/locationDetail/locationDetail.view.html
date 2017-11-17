@@ -37,7 +37,13 @@
 							<h2 class="panel-title">Location map</h2>
 						</div>
 						<div class="panel-body">
-							<img src="http://maps.googleapis.com/maps/api/staticmap?center={{vm.data.location.coords[1] }},{{ vm.data.location.coords[0]}}&amp;zoom=17&amp;size=400x350&amp;sensor=false&amp;markers={{vm.data.location.coords[1] }},{{ vm.data.location.coords[0]}}&amp;scale=2&key=	AIzaSyA12ioN6yC8vNIHd0DzdFRWkr9-w6T1Qvc" class="img-responsive img-rounded">
+							<img src="https://maps.googleapis.com/maps/api/staticmap?center={{vm.data.location.coords[1] }},{{ vm.data.location.coords[0]}}&amp;zoom=17&amp;size=400x350&amp;sensor=false&amp;markers={{vm.data.location.coords[1] }},{{ vm.data.location.coords[0]}}&amp;scale=2&key=	AIzaSyA12ioN6yC8vNIHd0DzdFRWkr9-w6T1Qvc" class="img-responsive img-rounded">
+							<!-- <iframe
+								width="400"
+								height="350"
+								frameborder="0" style="border:0"
+								src="https://www.google.com/maps/embed/v1/place?key=AIzaSyCO4Ti5TVG4QkqOMLfsOCZHABa2Icj9TQU&q={{vm.data.location.coords[1] }},{{ vm.data.location.coords[0]}}" allowfullscreen>
+							</iframe> -->
 						</div>
 					</div>
 				</div>
