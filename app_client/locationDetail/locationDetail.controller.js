@@ -3,10 +3,12 @@
 		.module('loc8rApp')
 		.controller('locationDetailCtrl', locationDetailCtrl);
 
-	locationDetailCtrl.$inject = ['$routeParams', '$modal','loc8rData'];
+	locationDetailCtrl.$inject = ['$routeParams', '$location', '$modal', 'loc8rData', 'authentication'];
 
-	function locationDetailCtrl($routeParams, $modal, loc8rData) {
+	function locationDetailCtrl($routeParams, $location, $modal, loc8rData, authentication) {
 		var vm = this;
+		vm.isLoggedIn = authentication.isLoggedIn();
+		vm.currentPath = $location.path();
 		vm.locationid = $routeParams.locationid;
 		loc8rData.locationById(vm.locationid)
 			.success(function(data) {
@@ -18,21 +20,22 @@
 			.error(function(e) {
 				console.log(e);
 			});
-		vm.popupReviewForm = function () {
+		vm.popupReviewForm = function() {
 			var modalInstance = $modal.open({
 				templateUrl: '/reviewModal/reviewModal.view.html',
 				controller: 'reviewModalCtrl as vm',
-				resolve : {
-					locationData : function () {
+				resolve: {
+					locationData: function() {
 						return {
-							locationid : vm.locationid,
-							locationName : vm.data.location.name
+							locationid: vm.locationid,
+							locationName: vm.data.location.name
 						};
 					}
 				}
 			});
 
-			modalInstance.result.then(function (data) {
+
+			modalInstance.result.then(function(data) {
 				vm.data.location.reviews.push(data);
 			});
 		};

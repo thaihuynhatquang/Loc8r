@@ -1,19 +1,72 @@
 var mongoose = require('mongoose');
 var Loc = mongoose.model('Location');
+var User = mongoose.model('User');
+
 
 var sendJsonResponse = function(res, status, content) {
 	res.status(status);
 	res.json(content);
 };
 
-var doAddReview = function(req, res, location) {
+
+module.exports.reviewsCreate = function(req, res) {
+	getAuthor(req, res, function(req, res, userName) {
+		var locationid = req.params.locationid;
+		if (locationid) {
+			Loc
+				.findById(locationid)
+				.select('reviews')
+				.exec(
+					function(err, location) {
+						if (err) {
+							sendJsonResponse(res, 400, err);
+						} else {
+							doAddReview(req, res, location, userName);
+						}
+					}
+				);
+		} else {
+			sendJsonResponse(res, 404, {
+				"message": "Not found, locationid required"
+			});
+		}
+	});
+};
+
+var getAuthor = function(req, res, callback) {
+	if (req.payload && req.payload.email) {
+		User
+			.findOne({ email: req.payload.email })
+			.exec(function(err, user) {
+				if (!user) {
+					sendJSONresponse(res, 404, {
+						"message": "User not found"
+					});
+					return;
+				} else if (err) {
+					console.log(err);
+					sendJSONresponse(res, 404, err);
+					return;
+				}
+				console.log(user);
+				callback(req, res, user.name);
+			});
+	} else {
+		sendJSONresponse(res, 404, {
+			"message": "User not found"
+		});
+		return;
+	}
+};
+
+var doAddReview = function(req, res, location, author) {
 	if (!location) {
 		sendJsonResponse(res, 404, {
 			"message": "locationid not found"
 		});
 	} else {
 		location.reviews.push({
-			author: req.body.author,
+			author: author,
 			rating: req.body.rating,
 			reviewText: req.body.reviewText
 		});
@@ -32,14 +85,14 @@ var doAddReview = function(req, res, location) {
 
 var updateAverageRating = function(locationid) {
 	Loc
-	.findById(locationid)
-	.select('rating reviews')
-	.exec(
-	function(err, location) {
-		if (!err) {
-			doSetAverageRating(location);
-		}
-	});
+		.findById(locationid)
+		.select('rating reviews')
+		.exec(
+			function(err, location) {
+				if (!err) {
+					doSetAverageRating(location);
+				}
+			});
 };
 
 var doSetAverageRating = function(location) {
@@ -58,28 +111,6 @@ var doSetAverageRating = function(location) {
 			} else {
 				console.log("Average rating updated to", ratingAverage);
 			}
-		});
-	}
-};
-
-module.exports.reviewsCreate = function(req, res) {
-	var locationid = req.params.locationid;
-	if (locationid) {
-		Loc
-			.findById(locationid)
-			.select('reviews')
-			.exec(
-				function(err, location) {
-					if (err) {
-						sendJsonResponse(res, 400, err);
-					} else {
-						doAddReview(req, res, location);
-					}
-				}
-			);
-	} else {
-		sendJsonResponse(res, 404, {
-		"message": "Not found, locationid required"
 		});
 	}
 };
@@ -139,46 +170,46 @@ module.exports.reviewsUpdateOne = function(req, res) {
 		return;
 	}
 	Loc
-	.findById(req.params.locationid)
-	.select('reviews')
-	.exec(
-		function(err, location) {
-			var thisReview;
-			if (!location) {
-				sendJsonResponse(res, 404, {
-					"message": "locationid not found"
-				});
-			return;
-			} else if (err) {
-				sendJsonResponse(res, 400, err);
-				return;
-			}
-			if (location.reviews && location.reviews.length > 0) {
-				thisReview = location.reviews.id(req.params.reviewid);
-				if (!thisReview) {
+		.findById(req.params.locationid)
+		.select('reviews')
+		.exec(
+			function(err, location) {
+				var thisReview;
+				if (!location) {
 					sendJsonResponse(res, 404, {
-						"message": "reviewid not found"
+						"message": "locationid not found"
 					});
+					return;
+				} else if (err) {
+					sendJsonResponse(res, 400, err);
+					return;
+				}
+				if (location.reviews && location.reviews.length > 0) {
+					thisReview = location.reviews.id(req.params.reviewid);
+					if (!thisReview) {
+						sendJsonResponse(res, 404, {
+							"message": "reviewid not found"
+						});
+					} else {
+						thisReview.author = req.body.author;
+						thisReview.rating = req.body.rating;
+						thisReview.reviewText = req.body.reviewText;
+						location.save(function(err, location) {
+							if (err) {
+								sendJsonResponse(res, 404, err);
+							} else {
+								updateAverageRating(location._id);
+								sendJsonResponse(res, 200, thisReview);
+							}
+						});
+					}
 				} else {
-					thisReview.author = req.body.author;
-					thisReview.rating = req.body.rating;
-					thisReview.reviewText = req.body.reviewText;
-					location.save(function(err, location) {
-						if (err) {
-							sendJsonResponse(res, 404, err);
-						} else {
-							updateAverageRating(location._id);
-							sendJsonResponse(res, 200, thisReview);
-						}
+					sendJsonResponse(res, 404, {
+						"message": "No review to update"
 					});
 				}
-			} else {
-				sendJsonResponse(res, 404, {
-					"message": "No review to update"
-				});
 			}
-		}
-	);
+		);
 };
 
 module.exports.reviewsDeleteOne = function(req, res) {
@@ -189,40 +220,40 @@ module.exports.reviewsDeleteOne = function(req, res) {
 		return;
 	}
 	Loc
-	.findById(req.params.locationid)
-	.select('reviews')
-	.exec(
-		function(err, location) {
-			if (!location) {
-				sendJsonResponse(res, 404, {
-					"message": "locationid not found"
-				});
-				return;
-			} else if (err) {
-				sendJsonResponse(res, 400, err);
-				return;
-			}
-			if (location.reviews && location.reviews.length > 0) {
-				if (!location.reviews.id(req.params.reviewid)) {
+		.findById(req.params.locationid)
+		.select('reviews')
+		.exec(
+			function(err, location) {
+				if (!location) {
 					sendJsonResponse(res, 404, {
-						"message": "reviewid not found"
+						"message": "locationid not found"
 					});
+					return;
+				} else if (err) {
+					sendJsonResponse(res, 400, err);
+					return;
+				}
+				if (location.reviews && location.reviews.length > 0) {
+					if (!location.reviews.id(req.params.reviewid)) {
+						sendJsonResponse(res, 404, {
+							"message": "reviewid not found"
+						});
+					} else {
+						location.reviews.id(req.params.reviewid).remove();
+						location.save(function(err) {
+							if (err) {
+								sendJsonResponse(res, 404, err);
+							} else {
+								updateAverageRating(location._id);
+								sendJsonResponse(res, 204, null);
+							}
+						});
+					}
 				} else {
-					location.reviews.id(req.params.reviewid).remove();
-					location.save(function(err) {
-						if (err) {
-							sendJsonResponse(res, 404, err);
-						} else {
-							updateAverageRating(location._id);
-							sendJsonResponse(res, 204, null);
-						}
+					sendJsonResponse(res, 404, {
+						"message": "No review to delete"
 					});
 				}
-			} else {
-				sendJsonResponse(res, 404, {
-					"message": "No review to delete"
-				});
 			}
-		}
-	);
+		);
 };
